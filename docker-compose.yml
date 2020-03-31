@@ -1,0 +1,59 @@
+version: "3"
+services:
+  postgres:
+    # image is tag looked up on
+    image: "postgres:latest"
+    environment:
+      - POSTGRES_PASSWORD=postgres_password
+  redis:
+    image: "redis:latest"
+  nginx:
+    restart: always
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./nginx
+    ports:
+      - "3050:80"
+  api:
+    depends_on:
+      - postgres
+    build:
+      # dockerfile is just name which is relative to context specified below
+      dockerfile: Dockerfile.dev
+      # since this .yml file is outside of server dir set context from cwd to server dir
+      context: ./server
+    volumes:
+      # leave the /app/node_modules alone, don't copy, don't touch
+      - /app/node_modules
+      # when files change in local server dir copy them to app dir in container
+      - ./server:/app
+    environment:
+      # anytime access a service inside of docker-compose.yml file
+      # we just specify the name of the service. so above in this file
+      # we just look under services: and find redis:
+      - REDIS_HOST=redis
+      # default port is 6379 can google this or configure using EXPOSE 6379
+      - REDIS_PORT=6379
+      # default values google to find
+      - PGUSER=postgres
+      - PGHOST=postgres
+      - PGDATABASE=postgres
+      - PGPASSWORD=postgres_password
+      - PGPORT=5432
+  client:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./client
+    volumes:
+      - /app/node_modules
+      - ./client:/app
+  worker:
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./worker
+    volumes:
+      - /app/node_modules
+      - ./worker:/app
