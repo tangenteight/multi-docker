@@ -1,0 +1,23 @@
+language: generic
+sudo: required
+services:
+  - docker
+
+before_install:
+  - docker build -t vesuviusbryan/react-test -f ./client/Dockerfile.dev ./client
+
+script:
+  - docker run -e CI=true vesuviusbryan/react-test npm test
+
+after_success:
+  - docker build -t vesuviusbryan/multi-client ./client
+  - docker build -t vesuviusbryan/multi-nginx ./nginx
+  - docker build -t vesuviusbryan/multi-server ./server
+  - docker build -t vesuviusbryan/multi-worker ./worker
+  # Log in to the docker CLI
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+  # These images need to go to Docker Hub
+  - docker push vesuviusbryan/multi-client
+  - docker push vesuviusbryan/multi-nginx
+  - docker push vesuviusbryan/multi-server
+  - docker push vesuviusbryan/multi-worker
